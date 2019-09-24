@@ -139,7 +139,15 @@ removing it from the start and end of the string.
 ```sh
 trim_string() {
     # Usage: trim_string "   example   string    "
+
+    # Remove all leading white-space.
+    # '${1%%[![:space:]]*}': Strip everything but leading white-space.
+    # '${1#${XXX}}': Remove the white-space from the start of the string.
     trim=${1#${1%%[![:space:]]*}}
+
+    # Remove all trailing white-space.
+    # '${trim##*[![:space:]]}': Strip everything but trailing white-space.
+    # '${trim#${XXX}}': Remove the white-space from the end of the string.
     trim=${trim%${trim##*[![:space:]]}}
 
     printf '%s\n' "$trim"
@@ -169,9 +177,19 @@ without leading/trailing white-space and with truncated spaces.
 # shellcheck disable=SC2086,SC2048
 trim_all() {
     # Usage: trim_all "   example   string    "
+
+    # Disable globbing to make the word-splitting below safe.
     set -f
+
+    # Set the argument list to the word-splitted string.
+    # This removes all leading/trailing white-space and reduces
+    # all instances of multiple spaces to a single ("  " -> " ").
     set -- $*
+
+    # Print the argument list as a string.
     printf '%s\n' "$*"
+
+    # Re-enable globbing.
     set +f
 }
 ```
@@ -398,6 +416,16 @@ head() {
         [ "$i" = "$1" ] && return
     done < "$2"
 
+    # 'read' used in a loop will skip over
+    # the last line of a file if it does not contain
+    # a newline and instead contains EOF.
+    #
+    # The final line iteration is skipped as 'read'
+    # exits with '1' when it hits EOF. 'read' however,
+    # still populates the variable.
+    #
+    # This ensures that the final line is always printed
+    # if applicable.
     [ -n "$line" ] && printf %s "$line"
 }
 ```
@@ -422,6 +450,14 @@ Alternative to `wc -l`.
 ```sh
 lines() {
     # Usage: lines "file"
+
+    # '|| [ -n "$line" ]': This ensures that lines
+    # ending with EOL instead of a newline are still
+    # operated on in the loop.
+    #
+    # 'read' exits with '1' when it sees EOL and
+    # without the added test, the line isn't sent
+    # to the loop.
     while read -r line || [ -n "$line" ]; do
         lines=$((lines+1))
     done < "$1"
@@ -491,10 +527,34 @@ Alternative to the `dirname` command.
 ```sh
 dirname() {
     # Usage: dirname "path"
-    dir=${1%%/}
+
+    # If '$1' is empty set 'dir' to '.', else '$1'.
+    dir=${1:-.}
+
+    # Strip all trailing forward-slashes '/' from
+    # the end of the string.
+    #
+    # "${dir##*[!/]}": Remove all non-forward-slashes
+    # from the start of the string, leaving us with only
+    # the trailing slashes.
+    # "${dir%%"${}"}:  Remove the result of the above
+    # substitution (a string of forward slashes) from the
+    # end of the original string.
+    dir=${dir%%"${dir##*[!/]}"}
+
+    # If the variable *does not* contain any forward slashes
+    # set its value to '.'.
     [ "${dir##*/*}" ] && dir=.
+
+    # Remove everything *after* the last forward-slash '/'.
     dir=${dir%/*}
 
+    # Again, strip all trailing forward-slashes '/' from
+    # the end of the string (see above).
+    dir=${dir%%"${dir##*[!/]}"}
+
+    # Print the resulting string and if it is empty,
+    # print '/'.
     printf '%s\n' "${dir:-/}"
 }
 ```
@@ -518,10 +578,27 @@ Alternative to the `basename` command.
 ```sh
 basename() {
     # Usage: basename "path" ["suffix"]
+
+    # Strip all trailing forward-slashes '/' from
+    # the end of the string.
+    #
+    # "${1##*[!/]}": Remove all non-forward-slashes
+    # from the start of the string, leaving us with only
+    # the trailing slashes.
+    # "${1%%"${}"}:  Remove the result of the above
+    # substitution (a string of forward slashes) from the
+    # end of the original string.
     dir=${1%${1##*[!/]}}
+
+    # Remove everything before the final forward-slash '/'.
     dir=${dir##*/}
+
+    # If a suffix was passed to the function, remove it from
+    # the end of the resulting string.
     dir=${dir%"$2"}
 
+    # Print the resulting string and if it is empty,
+    # print '/'.
     printf '%s\n' "${dir:-/}"
 }
 ```
@@ -822,7 +899,16 @@ is_float() {
     # Usage: is_float "number"
     [ -n "$1" ] && [ "$1" = "${1## }" ] && printf %f "$1" >/dev/null 2>&1
 }
+```
 
+**Example Usage:**
+
+```shell
+$ is_float 1 && echo true
+$
+
+$ is_float 1.1 && echo true
+$ true
 ```
 
 ## Check if a number is an integer
