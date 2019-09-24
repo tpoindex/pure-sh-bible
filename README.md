@@ -895,8 +895,8 @@ var=$((var2 > var ? var2 : var))
 **Example Function:**
 
 ```sh
+# Usage: is_float "number"
 is_float() {
-    # Usage: is_float "number"
     [ -n "$1" ] && [ "$1" = "${1## }" ] && printf %f "$1" >/dev/null 2>&1
 }
 ```
@@ -916,9 +916,9 @@ $ true
 **Example Function:**
 
 ```sh
+# usage: is_int "number"
 is_int() {
-    # usage: is_int "number"
-    [ -n "$1" ] && [ "$1" = "${1## }" ] && printf %d "$1" >/dev/null 2>&
+    [ -n "$1" ] && [ "$1" = "${1## }" ] && printf %d "$1" >/dev/null 2>&1
 }
 ```
 
